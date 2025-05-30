@@ -1,13 +1,31 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Settings, 
+  Plus, 
+  Newspaper, 
+  Calendar,
+  Trash2,
+  Edit3,
+  Save,
+  X,
+  TrendingUp,
+  Filter,
+  Search,
+  IndianRupee 
+} from 'lucide-react';
 import { newspaperAPI } from '../utils/api';
 import { useAuth } from '../lib/useAuth';
+
 export default function SetupDashboard() {
   useAuth(['user','admin'])
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
   const [newspapers, setNewspapers] = useState([]);
+  const [filteredNewspapers, setFilteredNewspapers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [newNewspaper, setNewNewspaper] = useState({
     name: '',
     rates: {
@@ -16,14 +34,18 @@ export default function SetupDashboard() {
     }
   });
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   const fetchNewspapers = useCallback(async () => {
     setLoading(true);
     try {
       const response = await newspaperAPI.getByMonth(month, year);
       setNewspapers(response.data);
+      setFilteredNewspapers(response.data);
     } catch (error) {
       console.error('Error fetching newspapers:', error);
     } finally {
@@ -35,8 +57,17 @@ export default function SetupDashboard() {
     fetchNewspapers();
   }, [fetchNewspapers]);
 
+  useEffect(() => {
+    const filtered = newspapers.filter(newspaper =>
+      newspaper.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredNewspapers(filtered);
+  }, [searchTerm, newspapers]);
+
   const handleAddNewspaper = async (e) => {
     e.preventDefault();
+    if (!newNewspaper.name.trim()) return;
+    
     setLoading(true);
     try {
       await newspaperAPI.create({
@@ -51,6 +82,7 @@ export default function SetupDashboard() {
           friday: 0, saturday: 0, sunday: 0
         }
       });
+      setShowAddForm(false);
       await fetchNewspapers();
     } catch (error) {
       console.error('Error adding newspaper:', error);
@@ -79,30 +111,88 @@ export default function SetupDashboard() {
     }
   };
 
+  const getTotalWeeklyRate = (rates) => {
+    return Object.values(rates).reduce((sum, rate) => sum + rate, 0);
+  };
+
+  const getMonthlyTotal = () => {
+    return newspapers.reduce((total, newspaper) => {
+      return total + getTotalWeeklyRate(newspaper.rates);
+    }, 0);
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
-    <div className="space-y-8">
+    <motion.div 
+      className="space-y-8 max-w-7xl mx-auto"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Header Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-        <div className="flex items-center mb-6">
-          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center mr-4">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+      <motion.div 
+        className="bg-gradient-to-br from-white via-blue-50 to-indigo-50 rounded-2xl shadow-xl border border-blue-100 p-8 backdrop-blur-sm"
+        variants={itemVariants}
+      >
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
+          <div className="flex items-center mb-6 lg:mb-0">
+            <motion.div 
+              className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mr-4 shadow-lg"
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Settings className="w-6 h-6 text-white" />
+            </motion.div>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-blue-700 bg-clip-text text-transparent">
+                Setup Dashboard
+              </h1>
+              <p className="text-gray-600 mt-1">Configure newspapers and their daily rates</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">Setup Dashboard</h2>
-            <p className="text-gray-600 mt-1">Configure newspapers and their daily rates</p>
-          </div>
+          
+          {newspapers.length > 0 && (
+            <motion.div 
+              className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-blue-200"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              <div className="flex items-center text-green-600">
+                <TrendingUp className="w-5 h-5 mr-2" />
+                <div>
+                  <p className="text-sm font-medium">Monthly Total</p>
+                  <p className="text-lg font-bold">₹{getMonthlyTotal().toFixed(2)}</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </div>
         
         <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">Month</label>
+          <motion.div variants={itemVariants}>
+            <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center">
+              <Calendar className="w-4 h-4 mr-2" />
+              Month
+            </label>
             <select 
               value={month} 
               onChange={(e) => setMonth(Number(e.target.value))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white shadow-sm hover:shadow-md"
             >
               {[...Array(12)].map((_, i) => (
                 <option key={i + 1} value={i + 1}>
@@ -110,178 +200,312 @@ export default function SetupDashboard() {
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">Year</label>
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center">
+              <Calendar className="w-4 h-4 mr-2" />
+              Year
+            </label>
             <input
               type="number"
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md"
             />
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Add New Newspaper Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-        <div className="flex items-center mb-6">
-          <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center mr-3">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </div>
-          <h3 className="text-xl font-bold text-gray-900">Add New Newspaper</h3>
+      {/* Action Bar */}
+      <motion.div 
+        className="flex flex-col sm:flex-row gap-4 items-center justify-between"
+        variants={itemVariants}
+      >
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Search newspapers..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white shadow-sm"
+          />
         </div>
         
-        <form onSubmit={handleAddNewspaper} className="space-y-6">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">Newspaper Name</label>
-            <input
-              type="text"
-              value={newNewspaper.name}
-              onChange={(e) => setNewNewspaper({...newNewspaper, name: e.target.value})}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-              placeholder="Enter newspaper name"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-4">Daily Rates (₹)</label>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-              {days.map(day => (
-                <div key={day} className="space-y-2">
-                  <label className="block text-xs font-medium text-gray-600 uppercase tracking-wide">
-                    {day.substring(0, 3)}
+        <motion.button
+          onClick={() => setShowAddForm(true)}
+          className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transform transition-all duration-200 shadow-lg hover:shadow-xl"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Add Newspaper
+        </motion.button>
+      </motion.div>
+
+      {/* Add New Newspaper Modal */}
+      <AnimatePresence>
+        {showAddForm && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mr-3">
+                    <Plus className="w-5 h-5 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">Add New Newspaper</h3>
+                </div>
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <form onSubmit={handleAddNewspaper} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                    <Newspaper className="w-4 h-4 mr-2" />
+                    Newspaper Name
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={newNewspaper.rates[day]}
-                    onChange={(e) => setNewNewspaper({
-                      ...newNewspaper,
-                      rates: {...newNewspaper.rates, [day]: Number(e.target.value)}
-                    })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                    placeholder="0.00"
+                    type="text"
+                    value={newNewspaper.name}
+                    onChange={(e) => setNewNewspaper({...newNewspaper, name: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    placeholder="Enter newspaper name"
+                    required
                   />
                 </div>
-              ))}
-            </div>
-          </div>
-          
-          <button 
-            type="submit"
-            disabled={loading}
-            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Adding...
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add Newspaper
-              </>
-            )}
-          </button>
-        </form>
-      </div>
+                
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-4 flex items-center">
+                    <IndianRupee className="w-4 h-4 mr-2" />
+                    Daily Rates (₹)
+                  </label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    {days.map((day, index) => (
+                      <motion.div 
+                        key={day} 
+                        className="space-y-2"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                      >
+                        <label className="block text-xs font-medium text-gray-600 uppercase tracking-wide text-center">
+                          {dayLabels[index]}
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={newNewspaper.rates[day]}
+                            onChange={(e) => setNewNewspaper({
+                              ...newNewspaper,
+                              rates: {...newNewspaper.rates, [day]: Number(e.target.value)}
+                            })}
+                            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="flex justify-end space-x-4 pt-6 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <motion.button 
+                    type="submit"
+                    disabled={loading}
+                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {loading ? (
+                      <>
+                        <motion.div
+                          className="w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-5 h-5 mr-2" />
+                        Add Newspaper
+                      </>
+                    )}
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Existing Newspapers Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-        <div className="flex items-center justify-between mb-6">
+      <motion.div 
+        className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8"
+        variants={itemVariants}
+      >
+        <div className="flex items-center justify-between mb-8">
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center mr-3">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-gray-900">
-              Existing Newspapers
-              {newspapers.length > 0 && (
-                <span className="ml-2 px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full">
-                  {newspapers.length}
-                </span>
+            <motion.div 
+              className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center mr-3 shadow-lg"
+              whileHover={{ scale: 1.05, rotate: -5 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Newspaper className="w-5 h-5 text-white" />
+            </motion.div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900">
+                Configured Newspapers
+              </h3>
+              {filteredNewspapers.length > 0 && (
+                <p className="text-gray-600 mt-1">
+                  {filteredNewspapers.length} of {newspapers.length} newspapers
+                </p>
               )}
-            </h3>
+            </div>
           </div>
           {loading && (
             <div className="flex items-center text-gray-500">
-              <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+              <motion.div
+                className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full mr-2"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              />
               Loading...
             </div>
           )}
         </div>
         
-        {newspapers.length === 0 ? (
-          <div className="text-center py-12">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-            </svg>
-            <h3 className="mt-4 text-lg font-medium text-gray-900">No newspapers configured</h3>
-            <p className="mt-2 text-gray-500">Get started by adding your first newspaper above.</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {newspapers.map(newspaper => (
-              <div key={newspaper._id} className="bg-gradient-to-r from-gray-50 to-blue-50 border border-gray-200 rounded-xl p-6 hover:shadow-md transition-all duration-200">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h4 className="text-lg font-bold text-gray-900">{newspaper.name}</h4>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Monthly total: ₹{Object.values(newspaper.rates).reduce((sum, rate) => sum + rate, 0).toFixed(2)}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteNewspaper(newspaper._id)}
-                    className="inline-flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+        <AnimatePresence>
+          {filteredNewspapers.length === 0 ? (
+            <motion.div 
+              className="text-center py-16"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 200 }}
+              >
+                <Newspaper className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                <h3 className="text-xl font-medium text-gray-900 mb-2">
+                  {searchTerm ? 'No newspapers found' : 'No newspapers configured'}
+                </h3>
+                <p className="text-gray-500 mb-6">
+                  {searchTerm 
+                    ? `No newspapers match "₹{searchTerm}". Try a different search term.`
+                    : 'Get started by adding your first newspaper.'
+                  }
+                </p>
+                {!searchTerm && (
+                  <motion.button
+                    onClick={() => setShowAddForm(true)}
+                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transform transition-all duration-200 shadow-lg hover:shadow-xl"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    Delete
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                  {days.map(day => (
-                    <div key={day} className="space-y-2">
-                      <label className="block text-xs font-medium text-gray-600 uppercase tracking-wide">
-                        {day.substring(0, 3)}
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">₹</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={newspaper.rates[day]}
-                          onChange={(e) => {
-                            const updatedRates = {...newspaper.rates, [day]: Number(e.target.value)};
-                            handleUpdateNewspaper(newspaper._id, {...newspaper, rates: updatedRates});
-                          }}
-                          className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
-                        />
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add Your First Newspaper
+                  </motion.button>
+                )}
+              </motion.div>
+            </motion.div>
+          ) : (
+            <div className="grid gap-6">
+              {filteredNewspapers.map((newspaper, index) => (
+                <motion.div 
+                  key={newspaper._id} 
+                  className="bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50 border border-gray-200 rounded-2xl p-6 hover:shadow-lg transition-all duration-300"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  layout
+                >
+                  <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start mb-6">
+                    <div className="mb-4 lg:mb-0">
+                      <h4 className="text-xl font-bold text-gray-900 mb-2">{newspaper.name}</h4>
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <div className="flex items-center">
+                          <IndianRupee className="w-4 h-4 mr-1" />
+                          Weekly: ₹{getTotalWeeklyRate(newspaper.rates).toFixed(2)}
+                        </div>
+                        <div className="flex items-center">
+                          <TrendingUp className="w-4 h-4 mr-1" />
+                          Avg/Day: ₹{(getTotalWeeklyRate(newspaper.rates) / 7).toFixed(2)}
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+                    <motion.button
+                      onClick={() => handleDeleteNewspaper(newspaper._id)}
+                      className="inline-flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-xl hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </motion.button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                    {days.map((day, dayIndex) => (
+                      <motion.div 
+                        key={day} 
+                        className="space-y-2"
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: (index * 0.1) + (dayIndex * 0.02) }}
+                      >
+                        <label className="block text-xs font-medium text-gray-600 uppercase tracking-wide text-center">
+                          {dayLabels[dayIndex]}
+                        </label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">₹</span>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={newspaper.rates[day]}
+                            onChange={(e) => {
+                              const updatedRates = {...newspaper.rates, [day]: Number(e.target.value)};
+                              handleUpdateNewspaper(newspaper._id, {...newspaper, rates: updatedRates});
+                            }}
+                            className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white shadow-sm hover:shadow-md"
+                          />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </motion.div>
   );
 }
