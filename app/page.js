@@ -1,7 +1,12 @@
 
-import SignIn from "./signin/page";
+import { Divide } from "lucide-react";
+import SignIn from "./components/page";
+import Navbar from './components/Navbar'
 export default function Page() {
   return (
-    <SignIn />
+    <div>
+      <Navbar />
+      <SignIn />
+    </div>
 );
 }
