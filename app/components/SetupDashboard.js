@@ -165,22 +165,7 @@ export default function SetupDashboard() {
             </div>
           </div>
           
-          {newspapers.length > 0 && (
-            <motion.div 
-              className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-blue-200"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              <div className="flex items-center text-green-600">
-                <TrendingUp className="w-5 h-5 mr-2" />
-                <div>
-                  <p className="text-sm font-medium">Monthly Total</p>
-                  <p className="text-lg font-bold">₹{getMonthlyTotal().toFixed(2)}</p>
-                </div>
-              </div>
-            </motion.div>
-          )}
+          
         </div>
         
         <div className="grid md:grid-cols-2 gap-6">
