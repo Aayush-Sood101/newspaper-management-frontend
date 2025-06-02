@@ -67,15 +67,16 @@ export default function Navbar() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
+            
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               <Link 
-                href="/about" 
+                href="/" 
                 className="hidden sm:inline-flex items-center px-4 py-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-all duration-200 font-medium"
               >
-                About
+                Sign In
               </Link>
             </motion.div>
             <motion.div
