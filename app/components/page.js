@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { jwtDecode } from 'jwt-decode';
 import { Loader2 } from 'lucide-react';
+
 export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -23,6 +24,8 @@ export default function SignIn() {
           return;
         }
 
+        console.log('🔍 Checking existing token...');
+
         // Verify token is still valid
         const res = await fetch(`${API_URL}/api/auth/verify`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -31,17 +34,22 @@ export default function SignIn() {
 
         if (res.ok) {
           const userData = await res.json();
-          const userRole = userData.role || (Array.isArray(userData.roles) && userData.roles[0]);
+          console.log('🔍 Existing auth userData:', userData);
           
-          // Redirect based on role - Make both consistent
+          const userRole = userData.role || (Array.isArray(userData.roles) && userData.roles[0]);
+          console.log('🔍 Existing auth user role:', userRole);
+          
+          // FIXED: Make redirects consistent
           if (userRole === 'admin') {
-            router.replace('/');
+            console.log('✅ Redirecting existing admin to /home');
+            router.replace('/home');
           } else {
+            console.log('✅ Redirecting existing user to /daily');
             router.replace('/daily');
           }
           return;
         } else {
-          // Token is invalid, remove it
+          console.log('❌ Existing token invalid, removing...');
           localStorage.removeItem('authToken');
         }
       } catch (err) {
@@ -61,6 +69,8 @@ export default function SignIn() {
     setIsLoading(true);
 
     try {
+      console.log('🔍 Attempting signin...');
+      
       const res = await fetch(`${API_URL}/api/auth/signin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -69,6 +79,7 @@ export default function SignIn() {
       });
 
       const data = await res.json();
+      console.log('🔍 Signin response:', data);
       
       if (!res.ok) {
         setError(data.message || 'Sign-in failed');
@@ -78,20 +89,25 @@ export default function SignIn() {
 
       // Persist token
       localStorage.setItem('authToken', data.token);
-      console.log('Token saved:', data.token);
+      console.log('✅ Token saved to localStorage');
 
       // Get role from decoded JWT
       const decoded = jwtDecode(data.token);
       const role = decoded.role;
-      console.log('User role:', role);
+      console.log('🔍 Decoded role from JWT:', role);
 
-      // Navigate based on role - both should redirect to the same place
+      // FIXED: Use consistent redirect paths and add delay
       if (role === 'admin') {
-        console.log('Redirecting admin to /');
-        router.push('/home'); // Use push instead of replace to see if it helps
+        console.log('✅ Redirecting new admin to /home');
+        // Add small delay to ensure token is saved
+        setTimeout(() => {
+          router.push('/home');
+        }, 100);
       } else {
-        console.log('Redirecting user to /daily');
-        router.push('/daily');
+        console.log('✅ Redirecting new user to /daily');
+        setTimeout(() => {
+          router.push('/daily');
+        }, 100);
       }
 
     } catch (err) {

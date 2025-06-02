@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -12,7 +12,6 @@ export function useAuth(requiredRoles = []) {
   const hasCheckedAuth = useRef(false);
   const timeoutRef = useRef(null);
 
-  // Memoize requiredRoles to prevent unnecessary re-renders
   const memoizedRequiredRoles = useMemo(() => requiredRoles, [requiredRoles]);
 
   useEffect(() => {
@@ -20,19 +19,17 @@ export function useAuth(requiredRoles = []) {
   }, []);
 
   useEffect(() => {
-    // Prevent multiple auth checks and wait for mount
     if (hasCheckedAuth.current || !mounted) return;
 
     let isMounted = true;
     const token = localStorage.getItem('authToken');
-    
-    // Set timeout only if token exists
+
     if (token) {
       timeoutRef.current = setTimeout(() => {
         if (isMounted && !hasCheckedAuth.current) {
           console.warn('Auth check timeout reached. Clearing token and reloading...');
           localStorage.removeItem('authToken');
-          hasCheckedAuth.current = true; // Prevent further checks
+          hasCheckedAuth.current = true;
           window.location.reload();
         }
       }, 3000);
@@ -42,19 +39,13 @@ export function useAuth(requiredRoles = []) {
       try {
         if (!token) {
           console.log('No token found');
-          if (isMounted) {
-            setIsLoading(false);
-          }
-          hasCheckedAuth.current = true; // Mark as checked even without token
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
-          }
+          hasCheckedAuth.current = true;
+          if (isMounted) setIsLoading(false);
           return;
         }
 
         console.log('Starting auth verification...');
-        
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 2500);
 
@@ -72,88 +63,69 @@ export function useAuth(requiredRoles = []) {
         if (!res.ok) {
           console.log('Auth verification failed:', res.status, res.statusText);
           localStorage.removeItem('authToken');
-          hasCheckedAuth.current = true; // Mark as checked
+          hasCheckedAuth.current = true;
           if (isMounted) {
             setIsLoading(false);
             router.replace('/');
-          }
-          if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-            timeoutRef.current = null;
           }
           return;
         }
 
         const userData = await res.json();
-        console.log('Auth response data:', userData); // Debug log
         
-        // Since backend returns { id, email, role }, extract role directly
-        const userRole = userData.role;
+        // DEBUG: Log the complete response
+        console.log('🔍 Full userData response:', userData);
+        console.log('🔍 Required roles:', memoizedRequiredRoles);
         
-        console.log('Extracted user role:', userRole);
-        console.log('Required roles:', memoizedRequiredRoles);
-        console.log('Role type:', typeof userRole);
-        console.log('Required roles types:', memoizedRequiredRoles.map(r => typeof r));
+        const userRole = userData?.role?.toLowerCase();
+        const required = memoizedRequiredRoles.map(r => r.toLowerCase());
 
-        // Always mark as checked after successful API response
+        // DEBUG: Log role comparison
+        console.log('🔍 User role (lowercase):', userRole);
+        console.log('🔍 Required roles (lowercase):', required);
+        console.log('🔍 Role check result:', required.length > 0 ? required.includes(userRole) : true);
+
         hasCheckedAuth.current = true;
 
-        // Check if role authorization is required and if user has the right role
-        if (memoizedRequiredRoles.length > 0) {
-          if (!userRole) {
-            console.log('No user role found');
-            if (isMounted) {
-              setIsLoading(false);
-              router.replace('/unauthorized');
-            }
-            if (timeoutRef.current) {
-              clearTimeout(timeoutRef.current);
-              timeoutRef.current = null;
-            }
-            return;
+        // Check if user has the required role
+        if (required.length > 0 && (!userRole || !required.includes(userRole))) {
+          console.log(`❌ User role (${userRole}) not authorized. Required: ${required}`);
+          if (isMounted) {
+            setIsLoading(false);
+            router.replace('/unauthorized');
           }
-          
-          if (!memoizedRequiredRoles.includes(userRole)) {
-            console.log('User role not authorized. User role:', userRole, 'Required:', memoizedRequiredRoles);
-            if (isMounted) {
-              setIsLoading(false);
-              router.replace('/unauthorized');
-            }
-            if (timeoutRef.current) {
-              clearTimeout(timeoutRef.current);
-              timeoutRef.current = null;
-            }
-            return;
-          }
+          return;
         }
 
-        console.log('Auth verification successful');
+        console.log('✅ Authentication and authorization successful');
+        
         if (isMounted) {
           setUser(userData);
           setIsAuthenticated(true);
           setIsLoading(false);
         }
-        
+
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
         }
+
       } catch (err) {
         console.error('Auth check failed:', err);
-        
-        // Always mark as checked to prevent infinite loops
+
         hasCheckedAuth.current = true;
-        
+
         if (err.name === 'AbortError') {
           console.warn('Auth request timed out, will be handled by main timeout');
           return;
         }
-        
+
         localStorage.removeItem('authToken');
         if (isMounted) {
           setIsLoading(false);
           router.replace('/');
         }
+
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
@@ -184,7 +156,6 @@ export function useAuth(requiredRoles = []) {
     router.replace('/');
   };
 
-  // Don't render until mounted (prevents hydration mismatch)
   if (!mounted) {
     return { isAuthenticated: false, isLoading: true, user: null, logout };
   }
