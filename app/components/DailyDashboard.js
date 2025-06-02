@@ -223,7 +223,7 @@ export default function DailyDashboard() {
               <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg text-white">
                 <Activity className="h-5 w-5" />
               </div>
-              <h3 className="text-2xl font-bold text-slate-800">Today's Newspapers</h3>
+              <h3 className="text-2xl font-bold text-slate-800">Today&apos;s Newspapers</h3>
             </div>
             <p className="text-slate-500">Track delivery status for {formattedSelectedDate}</p>
           </div>
