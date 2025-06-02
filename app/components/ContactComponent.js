@@ -235,7 +235,7 @@ const ContactPage = () => {
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-black mb-2">Get in Touch</h2>
                   <p className="text-gray-600">
-                    Fill out the form below and we'll get back to you as soon as possible.
+                    Fill out the form below and we&apos;ll get back to you as soon as possible.
                   </p>
                 </div>
 
